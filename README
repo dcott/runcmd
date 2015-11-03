@@ -1,0 +1,14 @@
+The runcmd.sh script is used to execute a shell command on large numbers
+systems via ssh. Commands can be run in series or in parallel. Output
+can be redirected to a separate log file for each host.
+
+Public key authentication should be configured for your account on each
+host. The ssh command uses BatchMode and disables StrictHostKeyChecking
+to make things a bit more seemless. See ssh_config(5) for more details.
+
+The -f options requires a file with a list of hostnames in the following
+format:
+
+HOSTS="host1 host2 host3 ..."
+
+The file is simply sourced and the HOSTS variable used.
