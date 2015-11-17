@@ -28,6 +28,28 @@ USAGE=${USAGE}'\t-f the filename that contains a list of hosts to operate on\n'
 USAGE=${USAGE}'\t-c the command to run on each host (required)\n'
 USAGE=${USAGE}'\t-d when running serially this adds a delay between hosts\n'
 
+pidList="";
+function handleSigInt() {
+	for pid in $pidList; do
+		kill $pid > /dev/null 2>&1;
+		failedHosts="$failedHosts ${pids[$pid]}";
+	done
+	checkFailedHosts
+	exit;
+}
+
+
+function checkFailedHosts() {
+	if [ "$failedHosts" != "" ]; then
+		echo "FAILED HOSTS: $failedHosts";
+		if [ $LOG == TRUE ]; then
+			echo "FAILED HOSTS: $failedHosts" >> $ERRORLOG;
+		fi
+	fi
+}
+
+trap handleSigInt INT
+
 BACKGROUND=FALSE
 CMD=FALSE
 DELAY=FALSE
@@ -104,7 +126,11 @@ if [ $BACKGROUND == FALSE ]; then
 			echo "### $HOST"
 		fi
 
-		if ssh ${USER}@${HOST} "${COMMAND}"; then
+		ssh -oBatchMode=yes -oStrictHostKeyChecking=no ${USER}@${HOST} "${COMMAND}" &
+		pids[$!]="$HOST";
+		pidList=$!;
+
+		if wait $!; then
 			STATUS=pass
 		else
 			STATUS=fail
@@ -146,9 +172,4 @@ else
 	done
 fi
 
-if [ "$failedHosts" != "" ]; then
-	echo "FAILED HOSTS: $failedHosts";
-	if [ $LOG == TRUE ]; then
-		echo "FAILED HOSTS: $failedHosts" >> $ERRORLOG;
-	fi
-fi
+checkFailedHosts;
